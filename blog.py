@@ -5,6 +5,7 @@ import sqlite3
 from flask import Flask
 from flask import render_template
 from flask import request,session, flash,redirect,url_for,g
+from functools import wraps
 
 DATABASE = 'Blog.db'
 USERNAME = 'admin'
@@ -33,21 +34,32 @@ def connect_db():
 
 @app.route('/',methods=['GET','POST'])
 def login():
-	#return render_template('login.html')
+	#in-first request nothing will be passed in (i.e it will be GET !!! so no form fill and direct display)
 	error = None
 	if request.method == 'POST':
 		if request.form['username'] != app.config['USERNAME'] or request.form['password'] != app.config['PASSWORD']:
 			error = 'Invalid Credentials !! Please Try again.'
 		else:
 			session['logged_in'] = True
-			return redirect(url_for('main'))
-	return render_template('login.html',error=error)
+			return redirect(url_for('main')) ## Logged-IN - first page 
+	
+
+	return render_template('login.html',error=error) ## passing the error variable for flashing it 
 
 
-
+def login_required(test):
+	@wraps(test)
+	def wrap(*args,**kwargs):
+		if 'logged_in' in session:
+			return test(*args,**kwargs)
+		else:
+			flash('You need to login first')
+			return redirect(url_for('login'))
+	return wrap 
 
 
 @app.route('/main')
+@login_required # This decorator has been added
 def main():
 	return render_template('main.html')
 
